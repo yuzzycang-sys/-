@@ -132,6 +132,7 @@ export function FilterBar({
                   <MultiSelectChip
                     label={cfg.label}
                     options={cfg.options}
+                    optionAnnotations={cfg.optionAnnotations}
                     selected={filterSelections[key] || []}
                     onChange={sel => onFilterSelect(key, sel)}
                     exclude={!!filterExcludes[key]}

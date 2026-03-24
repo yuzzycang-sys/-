@@ -33,11 +33,29 @@ export const FILTER_GROUPS: FilterGroup[] = [
 
 export const ALL_FILTER_KEYS = FILTER_GROUPS.flatMap(g => g.items.map(i => i.key));
 
-export const FILTER_CHIP_DATA: Record<string, { label: string; options: string[] }> = {
+export type FilterOptionAnnotation = { col1?: string; col2?: string };
+export type FilterChipConfig = {
+  label: string;
+  options: string[];
+  optionAnnotations?: Record<string, FilterOptionAnnotation>;
+};
+
+export const FILTER_CHIP_DATA: Record<string, FilterChipConfig> = {
   adCreateTime: { label: '广告创建时间', options: ['今天', '昨天', '近7天', '近30天', '本月', '上月'] },
   game: { label: '游戏名称', options: ['鱼乐', '大咖'] },
   optimizer: { label: '优化师', options: ['张磊', '李明', '王芳', '陈刚'] },
-  mainChannel: { label: '主渠道', options: ['头条btt','头条btoutiao','快手ksa','快手ksb','广点通gdt01','广点通gdt02'] },
+  mainChannel: {
+    label: '主渠道',
+    options: ['头条btt', '头条btoutiao', '快手ksa', '快手ksb', '广点通gdt01', '广点通gdt02'],
+    optionAnnotations: {
+      头条btt: { col1: '捕鱼大咖', col2: '安卓' },
+      头条btoutiao: { col1: '捕鱼大咖', col2: 'iOS' },
+      快手ksa: { col1: '捕鱼大咖', col2: 'iOS' },
+      快手ksb: { col1: '捕鱼大咖', col2: '鸿蒙' },
+      广点通gdt01: { col1: '捕鱼大咖', col2: '安卓' },
+      广点通gdt02: { col1: '捕鱼大咖', col2: '安卓' },
+    },
+  },
   subChannel: { label: '子渠道', options: ['tt00zs01','tt00zs02','tt00fx01','ks_all_01','gdt_main_a01'] },
   accountId: { label: '账号ID/名称', options: ['账号A', '账号B', '账号C'] },
   adId: { label: '广告ID/名称', options: ['广告001', '广告002', '广告003'] },

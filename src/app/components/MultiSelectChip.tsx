@@ -11,6 +11,7 @@ type CustomKind = 'exact' | 'fuzzy';
 interface Props {
   label: string;
   options: string[];
+  optionAnnotations?: Record<string, { col1?: string; col2?: string }>;
   selected: string[];
   onChange: (selected: string[]) => void;
   exclude: boolean;
@@ -102,7 +103,7 @@ function CustomBadge({ kind }: { kind: CustomKind | undefined }) {
 }
 
 export function MultiSelectChip({
-  label, options, selected, onChange, exclude, onExcludeChange,
+  label, options, optionAnnotations, selected, onChange, exclude, onExcludeChange,
 }: Props) {
   const [open, setOpen]           = useState(false);
   const [search, setSearch]       = useState('');
@@ -333,6 +334,10 @@ export function MultiSelectChip({
 
   // 统计自定义值数量（用于 tab 提示）
   const customCount = selected.filter(s => isCustomValue(s)).length;
+  const hasAnnotations = useMemo(
+    () => options.some(o => !!optionAnnotations?.[o]?.col1 || !!optionAnnotations?.[o]?.col2),
+    [options, optionAnnotations],
+  );
 
   // ── Render ────────────────────────────────────────────────────
   return (
@@ -511,13 +516,45 @@ export function MultiSelectChip({
 
                       {/* Label */}
                       <span style={{
-                        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        flex: hasAnnotations ? '0 0 44%' : 1,
+                        minWidth: 0,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         // 自定义值用斜体略作区分
                         fontStyle: isCustom ? 'italic' : 'normal',
                         color: isCustom ? '#555' : '#333',
                       }}>
                         {opt}
                       </span>
+
+                      {/* Optional annotation columns */}
+                      {hasAnnotations && (
+                        <>
+                          <span style={{
+                            flex: '0 0 26%',
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            color: '#646a73',
+                            fontSize: 12,
+                            textAlign: 'left',
+                          }}>
+                            {optionAnnotations?.[opt]?.col1 ?? ''}
+                          </span>
+                          <span style={{
+                            flex: '0 0 18%',
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            color: '#8f959e',
+                            fontSize: 12,
+                            textAlign: 'left',
+                          }}>
+                            {optionAnnotations?.[opt]?.col2 ?? ''}
+                          </span>
+                        </>
+                      )}
 
                       {/* 自定义 + 匹配方式 badges（仅在"已选"tab 中展示，或值本身就是自定义时） */}
                       {isCustom && (
