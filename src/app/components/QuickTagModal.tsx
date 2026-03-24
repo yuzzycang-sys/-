@@ -414,6 +414,13 @@ export function QuickTagModal({ tags: initialTags, onSave, onClose }: Props) {
   const isMine = (t: QuickTag) => t.owner === ME;
   const selectedTag = selId ? tags.find(t => t.id === selId) : null;
   const isReadonly = selectedTag ? !isMine(selectedTag) : false;
+  const formatUpdateTime = (value?: string) => {
+    if (!value) return '--';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '--';
+    const p2 = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+  };
 
   /* ── New tag ────────────────────────────────────────────── */
   const newTag = () => {
@@ -432,14 +439,14 @@ export function QuickTagModal({ tags: initialTags, onSave, onClose }: Props) {
       setTags(prev => prev.map(t => t.id === selId ? {
         ...t, label: fName.trim(), color: fColor,
         mainChannels: [...fMainCh], subChannels: [...fSubCh],
-        vis: fVis, authUsers: [...fAuth],
+        vis: fVis, authUsers: [...fAuth], updatedAt: new Date().toISOString(),
       } : t));
     } else {
       const newId = `t_${Date.now()}`;
       setTags(prev => [...prev, {
         id: newId, label: fName.trim(), color: fColor, active: false,
         owner: ME, mainChannels: [...fMainCh], subChannels: [...fSubCh],
-        vis: fVis, authUsers: [...fAuth],
+        vis: fVis, authUsers: [...fAuth], updatedAt: new Date().toISOString(),
       }]);
       setSelId(newId); setIsNew(false);
     }
@@ -531,7 +538,14 @@ export function QuickTagModal({ tags: initialTags, onSave, onClose }: Props) {
           <button onClick={newTag} style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'5px 14px',borderRadius:16,background:'#1890ff',color:'#fff',border:'none',fontSize:13,cursor:'pointer' }}>
             <Plus size={14} /> 新增标签
           </button>
-          <div style={{ marginLeft:'auto',cursor:'pointer',lineHeight:0 }} onClick={onClose}><X size={16} color="#999" /></div>
+          <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:16 }}>
+            {!isNew && (
+              <span style={{ fontSize:12, color:'#999', whiteSpace:'nowrap' }}>
+                最后更新时间：{formatUpdateTime(selectedTag?.updatedAt)}
+              </span>
+            )}
+            <div style={{ cursor:'pointer', lineHeight:0 }} onClick={onClose}><X size={16} color="#999" /></div>
+          </div>
         </div>
 
         {/* ══ BODY ══ */}

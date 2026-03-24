@@ -57,6 +57,7 @@ export interface QuickTag {
   color: string;       // color key or hex
   active: boolean;
   owner: string;       // creator name
+  updatedAt?: string;  // last update time
   mainChannels: string[];   // full paths like "大咖-头条-头条btt"
   subChannels: string[];    // identifiers like "tt00zs01"
   vis: ShareVis;
