@@ -449,6 +449,26 @@ export function QuickTagModal({ tags: initialTags, onSave, onClose }: Props) {
     });
     return Array.from(set);
   };
+  const renderAntTag = (text: string) => (
+    <span
+      key={text}
+      style={{
+        display: 'inline-block',
+        height: 22,
+        lineHeight: '20px',
+        padding: '0 7px',
+        fontSize: 12,
+        color: 'rgba(0,0,0,0.88)',
+        background: '#fafafa',
+        border: '1px solid #d9d9d9',
+        borderRadius: 4,
+        whiteSpace: 'nowrap',
+        boxSizing: 'border-box',
+      }}
+    >
+      {text}
+    </span>
+  );
   const formatUpdateTime = (value?: string) => {
     if (!value) return '--';
     const d = new Date(value);
@@ -1048,7 +1068,7 @@ export function QuickTagModal({ tags: initialTags, onSave, onClose }: Props) {
 
             <div style={{ padding:'12px 20px', borderBottom:'1px solid #f0f0f0' }}>
               <div style={{ fontSize:12, color:'#999', marginBottom:10 }}>
-                仅支持选择「我」创建的其他标签，可多选。
+                将当前标签内所选主/子渠道配置完全同步追加至其他标签
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <div style={{ flex:1, display:'flex', alignItems:'center', gap:6, border:'1px solid #e0e0e0', borderRadius:8, padding:'7px 10px' }}>
@@ -1102,10 +1122,8 @@ export function QuickTagModal({ tags: initialTags, onSave, onClose }: Props) {
                         <div style={{ width:9, height:9, borderRadius:'50%', background:getColorHex(t.color), flexShrink:0 }} />
                         <span style={{ flex:1, minWidth:0, fontSize:13, color:'#333', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.label}</span>
                         <div style={{ display:'flex', gap:6, flexShrink:0, alignItems:'center' }}>
-                          {projects.slice(0, 2).map(p => (
-                            <span key={p} style={{ fontSize:12, color:'#ff4d4f', fontWeight:600, whiteSpace:'nowrap' }}>{p}</span>
-                          ))}
-                          {projects.length > 2 && <span style={{ fontSize:12, color:'#ff4d4f', fontWeight:600 }}>+{projects.length - 2}</span>}
+                          {projects.slice(0, 3).map(renderAntTag)}
+                          {projects.length > 3 && renderAntTag(`+${projects.length - 3}`)}
                         </div>
                         <span style={{ fontSize:12, color:'#999', flexShrink:0, whiteSpace:'nowrap' }}>{formatUpdateTime(t.updatedAt)}</span>
                       </div>
