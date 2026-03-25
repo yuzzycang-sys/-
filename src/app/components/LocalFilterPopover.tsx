@@ -495,14 +495,15 @@ interface TextInputPanelProps {
   entityLabel: string; // '账号' | '广告'
   selected: string[];
   onChangeSelected: (next: string[]) => void;
+  exclude: boolean;
+  onExcludeChange: (v: boolean) => void;
 }
 
-function TextInputPanel({ entityLabel, selected, onChangeSelected }: TextInputPanelProps) {
+function TextInputPanel({ entityLabel, selected, onChangeSelected, exclude, onExcludeChange }: TextInputPanelProps) {
   const [subType, setSubType] = useState<'id' | 'name'>('id');
   const [matchMode, setMatchMode] = useState<MatchMode>('exact');
   const [inputText, setInputText] = useState('');
   const [valueMeta, setValueMeta] = useState<Record<string, MatchMode>>({});
-  const [exclude, setExclude] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -511,7 +512,7 @@ function TextInputPanel({ entityLabel, selected, onChangeSelected }: TextInputPa
   }, []);
 
   useEffect(() => {
-    if (selected.length === 0) { setExclude(false); setValueMeta({}); }
+    if (selected.length === 0) { onExcludeChange(false); setValueMeta({}); }
   }, [selected.length]);
 
   const tokens = useMemo(() => parseTokens(inputText), [inputText]);
@@ -537,7 +538,7 @@ function TextInputPanel({ entityLabel, selected, onChangeSelected }: TextInputPa
 
   const handleClear = () => {
     onChangeSelected([]);
-    setExclude(false);
+    onExcludeChange(false);
     setValueMeta({});
   };
 
@@ -545,7 +546,7 @@ function TextInputPanel({ entityLabel, selected, onChangeSelected }: TextInputPa
     if (t === subType) return;
     setSubType(t);
     onChangeSelected([]);
-    setExclude(false);
+    onExcludeChange(false);
     setValueMeta({});
     setInputText('');
   };
@@ -678,7 +679,7 @@ function TextInputPanel({ entityLabel, selected, onChangeSelected }: TextInputPa
             borderTop: '1px solid #f0f0f0', background: '#fafafa',
           }}>
             <div
-              onClick={() => setExclude(v => !v)}
+              onClick={() => onExcludeChange(!exclude)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}
             >
               <div style={{
@@ -703,6 +704,7 @@ function TextInputPanel({ entityLabel, selected, onChangeSelected }: TextInputPa
 export function LocalFilterPopover({ localFilters, onChangeFilters, anchorRect, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [localExcludes, setLocalExcludes] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -744,6 +746,7 @@ export function LocalFilterPopover({ localFilters, onChangeFilters, anchorRect, 
   const handleClearAll = () => {
     onChangeFilters({});
     setExpandedKey(null);
+    setLocalExcludes({});
   };
 
   const handleChangeItemSelected = (key: string, next: string[]) => {
@@ -793,6 +796,12 @@ export function LocalFilterPopover({ localFilters, onChangeFilters, anchorRect, 
                 const selectedValues = localFilters[item.key] || [];
                 const chipData = FILTER_CHIP_DATA[item.key];
                 const isTextInput = TEXT_INPUT_KEYS.has(item.key);
+                const itemExclude = isTextInput && !!localExcludes[item.key];
+                const activeColor = itemExclude ? '#fa8c16' : '#1890ff';
+                const activeBg    = itemExclude ? '#fff7e6' : '#f0f7ff';
+                const activeBorder = itemExclude ? '#ffd591' : '#bae0ff';
+                const chipBg     = itemExclude ? '#fff7e6' : '#e6f7ff';
+                const chipBorder  = itemExclude ? '#ffd591' : '#bae0ff';
 
                 return (
                   <div key={item.key}>
@@ -801,8 +810,8 @@ export function LocalFilterPopover({ localFilters, onChangeFilters, anchorRect, 
                       style={{
                         display: 'flex', alignItems: 'center', gap: 8,
                         padding: '5px 6px', borderRadius: 4, cursor: 'pointer',
-                        background: active ? '#f0f7ff' : 'transparent',
-                        border: `1px solid ${active ? '#bae0ff' : 'transparent'}`,
+                        background: active ? activeBg : 'transparent',
+                        border: `1px solid ${active ? activeBorder : 'transparent'}`,
                         transition: 'all 0.15s',
                       }}
                       onClick={() => handleCheckboxClick(item.key)}
@@ -810,8 +819,8 @@ export function LocalFilterPopover({ localFilters, onChangeFilters, anchorRect, 
                       {/* Checkbox */}
                       <div style={{
                         width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-                        border: `1.5px solid ${active ? '#1890ff' : '#d9d9d9'}`,
-                        background: active ? '#1890ff' : '#fff',
+                        border: `1.5px solid ${active ? activeColor : '#d9d9d9'}`,
+                        background: active ? activeColor : '#fff',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'all 0.15s',
                       }}>
@@ -823,7 +832,7 @@ export function LocalFilterPopover({ localFilters, onChangeFilters, anchorRect, 
                       </div>
 
                       {/* Label */}
-                      <span style={{ fontSize: 13, color: active ? '#1890ff' : '#333', flex: 1 }}>
+                      <span style={{ fontSize: 13, color: active ? activeColor : '#333', flex: 1 }}>
                         {item.label}
                       </span>
 
@@ -835,9 +844,9 @@ export function LocalFilterPopover({ localFilters, onChangeFilters, anchorRect, 
                               key={v}
                               style={{
                                 display: 'inline-flex', alignItems: 'center', gap: 3,
-                                padding: '1px 6px', background: '#e6f7ff',
-                                border: '1px solid #bae0ff', borderRadius: 3,
-                                fontSize: 12, color: '#1890ff', whiteSpace: 'nowrap',
+                                padding: '1px 6px', background: chipBg,
+                                border: `1px solid ${chipBorder}`, borderRadius: 3,
+                                fontSize: 12, color: activeColor, whiteSpace: 'nowrap',
                               }}
                             >
                               {v}
@@ -866,6 +875,8 @@ export function LocalFilterPopover({ localFilters, onChangeFilters, anchorRect, 
                         entityLabel={item.key === 'accountId' ? '账号' : '广告'}
                         selected={selectedValues}
                         onChangeSelected={next => handleChangeItemSelected(item.key, next)}
+                        exclude={!!localExcludes[item.key]}
+                        onExcludeChange={v => setLocalExcludes(prev => ({ ...prev, [item.key]: v }))}
                       />
                     )}
                     {expanded && !isTextInput && chipData && (
