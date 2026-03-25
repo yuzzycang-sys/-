@@ -242,32 +242,6 @@ export function AggregateDimensionPopover({
         {/* Left: grouped checkbox grid */}
         <div style={{ padding: '12px 16px 4px', width: isCustom ? 380 : 420, flexShrink: 0 }}>
 
-          {/* Time dimension: permanent */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: '#aaa', marginBottom: 6 }}>时间维度</div>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '4px 10px', borderRadius: 4,
-              background: '#e6f4ff', border: '1px solid #bae0ff',
-              fontSize: 12,
-            }}>
-              <div style={{
-                width: 14, height: 14, borderRadius: 3,
-                background: '#1890ff', border: '1.5px solid #1890ff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <Check size={9} color="#fff" strokeWidth={3} />
-              </div>
-              <span style={{ color: '#1890ff' }}>
-                {TIME_LABEL}{granLabel ? `(${granLabel})` : ''}
-              </span>
-              <span style={{
-                fontSize: 10, color: '#91caff', padding: '0 4px', borderRadius: 3,
-                background: '#bae0ff',
-              }}>常驻</span>
-            </div>
-          </div>
-
           {/* Selectable dim groups */}
           {DIM_GROUPS.map((group, gi) => (
             <div key={group.group} style={{ marginBottom: gi < DIM_GROUPS.length - 1 ? 12 : 0 }}>
