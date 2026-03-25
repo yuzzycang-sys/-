@@ -50,6 +50,8 @@ interface Props {
   onChangeDims: (dims: string[]) => void;
   onClose: () => void;
   timeGranularity?: 'day' | 'week' | 'month';
+  orderMode: OrderMode;
+  onOrderModeChange: (mode: OrderMode) => void;
 }
 
 function ensureTime(dims: string[]): string[] {
@@ -78,11 +80,10 @@ function RemoveBtn({ onRemove }: { onRemove: () => void }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function AggregateDimensionPopover({
-  activeDims, onChangeDims, onClose, timeGranularity,
+  activeDims, onChangeDims, onClose, timeGranularity, orderMode, onOrderModeChange,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [localDims, setLocalDims] = useState<string[]>(() => ensureTime(activeDims));
-  const [orderMode, setOrderMode] = useState<OrderMode>('default');
   const [showModeDropdown, setShowModeDropdown] = useState(false);
   const [draggedKey, setDraggedKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
@@ -123,7 +124,7 @@ export function AggregateDimensionPopover({
 
   // ── Order mode ─────────────────────────────────────────────────────────────
   const handleSetMode = (mode: OrderMode) => {
-    setOrderMode(mode);
+    onOrderModeChange(mode);
     setShowModeDropdown(false);
     if (mode === 'default') {
       const sorted = sortByDefinition(localDims);

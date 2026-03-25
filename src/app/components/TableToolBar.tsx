@@ -39,6 +39,7 @@ export function TableToolBar({
   localFilters, onChangeLocalFilters,
 }: Props) {
   const [showAggDim, setShowAggDim] = useState(false);
+  const [aggDimOrderMode, setAggDimOrderMode] = useState<'default' | 'custom'>('default');
   const aggDimRef = useRef<HTMLDivElement>(null);
 
   const [showFilterPop, setShowFilterPop] = useState(false);
@@ -151,6 +152,8 @@ export function TableToolBar({
                 onChangeDims={onChangeDims}
                 onClose={() => setShowAggDim(false)}
                 timeGranularity={timeGranularity}
+                orderMode={aggDimOrderMode}
+                onOrderModeChange={setAggDimOrderMode}
               />
             )}
           </div>
