@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Toaster, toast } from 'sonner';
+import { Lock } from 'lucide-react';
 import { TopNav } from './components/TopNav';
 import { Sidebar } from './components/Sidebar';
 import { ViewBar } from './components/ViewBar';
@@ -17,6 +18,33 @@ import type { LocalFilters } from './components/LocalFilterPopover';
 import type { ShareMode } from './components/ShareViewModal';
 
 const F = "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif";
+
+// ── Permission system constants ────────────────────────────────
+const CURRENT_USER = '张三';
+
+// Maps ShareViewModal user IDs → names (for Scene 1 checks)
+const SHARE_USER_NAMES: Record<string, string> = {
+  u1: '张磊', u2: '李明', u3: '王芳', u4: '陈刚',
+  u5: '陈路遥', u6: '刘洋', u7: '赵琳', u8: '吴晓',
+  u9: '周杰', u10: '孙雅', u11: '钱文', u12: '胡波',
+};
+
+function canUserAccessTag(userName: string, tag: QuickTag): boolean {
+  if (tag.vis === 'public') return true;
+  if (tag.owner === userName) return true;
+  if (tag.vis === 'partial' && tag.authUsers.includes(userName)) return true;
+  return false;
+}
+
+type TagInfo = { id: string; label: string; owner: string; vis: string };
+type PageStatus = { type: 'OK' } | { type: 'NO_PERMISSION'; missingTagsInfo: TagInfo[] };
+
+type PendingShareAction = {
+  viewId: string;
+  shareMode: ShareMode;
+  sharedWith: string[];
+  misalignedTags: Array<{ tag: QuickTag; lackingUsers: string[] }>;
+};
 
 // ── Per-sheet state ──────────────────────────────────────────
 interface SheetState {
@@ -56,11 +84,15 @@ const INITIAL_VIEWS: ViewItem[] = [
   { id: '1', name: '乐乐·周报',          type: 'mine',   pinned: true  },
   { id: '2', name: '大盘·周投',          type: 'mine',   pinned: true  },
   { id: '3', name: '大盘·月报',          type: 'mine',   pinned: true  },
-  { id: '4', name: '归因GAP',            type: 'mine',   pinned: false },
-  { id: '5', name: '腾讯主包GAP',        type: 'mine',   pinned: false },
-  { id: '6', name: '捕鱼大咖iOS当天数据', type: 'shared', owner: '陈路遥', pinned: false },
-  { id: '7', name: '异常监控视图',       type: 'shared', owner: '陈路遥', pinned: false },
-  { id: '8', name: '市场大盘',           type: 'public', pinned: false },
+  // View 4: mine, shared with specific users, contains t1+t3 — Scene 1 + Scene 2
+  { id: '4', name: '归因GAP',            type: 'mine',   pinned: false, tag_ids: ['t1', 't3'], shareMode: 'specific', sharedWith: ['u5', 'u9'] },
+  // View 5: mine, publicly shared, contains t4 — Scene 1 + Scene 2
+  { id: '5', name: '腾讯主包GAP',        type: 'mine',   pinned: false, tag_ids: ['t4'], shareMode: 'public' },
+  // View 6 contains t5 (王五's partial tag, no authUsers) — Scene 3 hard-blocks 张三!
+  { id: '6', name: '捕鱼大咖iOS当天数据', type: 'shared', owner: '陈路遥', pinned: false, tag_ids: ['t5'] },
+  // View 7 references t3 + t6 (both public) — Scene 4 blocks deleting t3 or t6
+  { id: '7', name: '异常监控视图',       type: 'shared', owner: '陈路遥', pinned: false, tag_ids: ['t3', 't6'] },
+  { id: '8', name: '市场大盘',           type: 'public', pinned: false, tag_ids: ['t8'] },
   { id: '9', name: '渠道大盘',           type: 'public', pinned: false },
 ];
 
@@ -70,7 +102,7 @@ const INITIAL_TAGS: QuickTag[] = [
     mainChannels: ['大咖-头条-头条btt', '大咖-头条-头条btoutiao'],
     subChannels: ['tt00zs01', 'tt00zs02', 'tt00zs03', 'tt00fx01', 'tt00fx02'],
     vis: 'private', authUsers: [] },
-    { id: 't2', label: '头条-iOS-付费', color: 'green', active: false, owner: '张三',
+  { id: 't2', label: '头条-iOS-付费', color: 'green', active: false, owner: '张三',
     updatedAt: '2026-03-23T18:12:42+08:00',
     mainChannels: ['大咖-头条-头条btt_ios'],
     subChannels: ['tt01ios_pay01', 'tt01ios_pay02'],
@@ -107,6 +139,112 @@ const INITIAL_TAGS: QuickTag[] = [
     vis: 'public', authUsers: [] },
 ];
 
+// ── Scene 1: TagPermAlignDialog ─────────────────────────────
+function TagPermAlignDialog({
+  misalignedTags, shareMode, onAlign, onSaveAnyway, onCancel,
+}: {
+  misalignedTags: Array<{ tag: QuickTag; lackingUsers: string[] }>;
+  shareMode: ShareMode;
+  onAlign: () => void;
+  onSaveAnyway: () => void;
+  onCancel: () => void;
+}) {
+  const visLabel = (v: string) =>
+    v === 'public' ? '公开' : v === 'partial' ? '指定用户' : '私有';
+  const targetLabel = shareMode === 'public' ? '「公开」' : '「指定用户」';
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 99999,
+      background: 'rgba(0,0,0,0.36)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: F,
+    }}>
+      <div style={{
+        width: 500, background: '#fff', borderRadius: 10,
+        boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#222' }}>共享权限不一致</div>
+          <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>
+            以下快捷标签的权限范围小于视图的共享范围 {targetLabel}，受邀用户可能无法正常使用此视图
+          </div>
+        </div>
+        <div style={{ padding: '16px 20px', overflowY: 'auto', maxHeight: 280 }}>
+          {misalignedTags.map(({ tag, lackingUsers }) => (
+            <div key={tag.id} style={{
+              padding: '10px 12px', marginBottom: 8, borderRadius: 6,
+              background: '#fff7e6', border: '1px solid #ffd591',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontWeight: 500, fontSize: 13, color: '#333' }}>「{tag.label}」</span>
+                <span style={{
+                  fontSize: 11, padding: '1px 6px', borderRadius: 3,
+                  background: '#f0f0f0', color: '#666',
+                }}>
+                  当前：{visLabel(tag.vis)}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: '#874d00' }}>
+                以下用户无权访问此标签：{lackingUsers.join('、')}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{
+          display: 'flex', justifyContent: 'flex-end', gap: 8,
+          padding: '12px 20px', borderTop: '1px solid #f0f0f0',
+        }}>
+          <button onClick={onCancel} style={{
+            padding: '5px 16px', border: '1px solid #d9d9d9', borderRadius: 4,
+            background: '#fff', color: '#555', fontSize: 13, cursor: 'pointer', fontFamily: F,
+          }}>取消</button>
+          <button onClick={onSaveAnyway} style={{
+            padding: '5px 16px', border: '1px solid #d9d9d9', borderRadius: 4,
+            background: '#fff', color: '#333', fontSize: 13, cursor: 'pointer', fontFamily: F,
+          }}>仍然保存</button>
+          <button onClick={onAlign} style={{
+            padding: '5px 16px', border: 'none', borderRadius: 4,
+            background: '#1890ff', color: '#fff', fontSize: 13, cursor: 'pointer', fontFamily: F,
+          }}>对齐权限并保存</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 3: NoPermissionView ──────────────────────────────
+function NoPermissionView({ missingTagsInfo }: { missingTagsInfo: TagInfo[] }) {
+  return (
+    <div style={{
+      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexDirection: 'column', gap: 16, padding: '40px 20px', fontFamily: F,
+    }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: '50%',
+        background: '#fff2f0', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Lock size={28} color="#ff4d4f" />
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2329' }}>无法加载此视图</div>
+      <div style={{ fontSize: 13, color: '#8f959e', textAlign: 'center', maxWidth: 380 }}>
+        当前视图包含您无权访问的快捷标签。请联系标签所有者开放权限，或请视图创建者调整标签配置。
+      </div>
+      <div style={{ width: '100%', maxWidth: 400 }}>
+        {missingTagsInfo.map(t => (
+          <div key={t.id} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 14px', marginBottom: 8, borderRadius: 6,
+            background: '#fff2f0', border: '1px solid #ffa39e',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: '#cf1322' }}>「{t.label}」</span>
+            <span style={{ fontSize: 12, color: '#999' }}>{t.owner}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // View state
   const [views, setViews] = useState<ViewItem[]>(INITIAL_VIEWS);
@@ -139,6 +277,10 @@ export default function App() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(30);
 
+  // ── Permission system state ──────────────────────────────
+  const [pageStatus, setPageStatus] = useState<PageStatus>({ type: 'OK' });
+  const [pendingShareAction, setPendingShareAction] = useState<PendingShareAction | null>(null);
+
   const currentSheetState = sheetStates[activeSheet] || DEFAULT_SHEET_STATE;
 
   const updateSheetState = (patch: Partial<SheetState>) => {
@@ -155,20 +297,130 @@ export default function App() {
     setViews(prev => prev.map(v => v.id === id ? { ...v, pinned: !v.pinned } : v));
 
   const handleSaveNew = (name: string) => {
-    setViews(prev => [...prev, { id: String(Date.now()), name, type: 'mine', pinned: false }]);
+    // Capture currently active tag IDs when saving
+    const tagIds = quickTags.filter(t => t.active).map(t => t.id);
+    setViews(prev => [...prev, {
+      id: String(Date.now()), name, type: 'mine', pinned: false,
+      tag_ids: tagIds.length > 0 ? tagIds : undefined,
+    }]);
     setSelectedView(name);
   };
 
-  const handleSelectView = (name: string) => { setSelectedView(name); setActivePinnedTag(null); };
-  const handleClickPinnedTag = (name: string) => {
-    if (activePinnedTag === name) setActivePinnedTag(null);
-    else { setActivePinnedTag(name); setSelectedView(name); }
+  // ── Scene 3: Load view → check tag permissions ────────────
+  const handleSelectView = (name: string) => {
+    const view = views.find(v => v.name === name);
+    if (view?.tag_ids && view.tag_ids.length > 0) {
+      const missingTags: TagInfo[] = [];
+      for (const tagId of view.tag_ids) {
+        const tag = quickTags.find(t => t.id === tagId);
+        if (tag && !canUserAccessTag(CURRENT_USER, tag)) {
+          missingTags.push({ id: tag.id, label: tag.label, owner: tag.owner, vis: tag.vis });
+        }
+      }
+      if (missingTags.length > 0) {
+        // Hard block: show NO_PERMISSION empty state
+        setPageStatus({ type: 'NO_PERMISSION', missingTagsInfo: missingTags });
+        setSelectedView(name);
+        setActivePinnedTag(null);
+        // Don't activate any tags
+        return;
+      }
+      // All accessible: activate the view's tags
+      setQuickTags(prev => prev.map(t => ({
+        ...t,
+        active: (view.tag_ids ?? []).includes(t.id),
+      })));
+      const willBeActive = view.tag_ids.length > 0;
+      if (willBeActive && !channelLocked) setChannelLocked(true);
+      else if (!willBeActive && channelLocked) setChannelLocked(false);
+    } else {
+      // View has no tags: deactivate all tags
+      setQuickTags(prev => prev.map(t => ({ ...t, active: false })));
+      if (channelLocked) {
+        setChannelLocked(false);
+        toast('主/子渠道筛选恢复生效');
+      }
+    }
+    setPageStatus({ type: 'OK' });
+    setSelectedView(name);
+    setActivePinnedTag(null);
   };
 
+  const handleClickPinnedTag = (name: string) => {
+    if (activePinnedTag === name) setActivePinnedTag(null);
+    else { setActivePinnedTag(name); handleSelectView(name); }
+  };
+
+  // ── Scene 1: Share view → check tag alignment ─────────────
   const handleShareView = (id: string, shareMode: ShareMode, sharedWith: string[]) => {
-    setViews(prev => prev.map(v =>
-      v.id === id ? { ...v, shareMode, sharedWith } : v
-    ));
+    if (shareMode === 'private') {
+      setViews(prev => prev.map(v => v.id === id ? { ...v, shareMode, sharedWith: [] } : v));
+      return;
+    }
+
+    const view = views.find(v => v.id === id);
+    if (!view?.tag_ids || view.tag_ids.length === 0) {
+      setViews(prev => prev.map(v => v.id === id ? { ...v, shareMode, sharedWith } : v));
+      return;
+    }
+
+    // Check tag accessibility for all authorized users
+    const misaligned: Array<{ tag: QuickTag; lackingUsers: string[] }> = [];
+    for (const tagId of view.tag_ids) {
+      const tag = quickTags.find(t => t.id === tagId);
+      if (!tag) continue;
+      if (tag.vis === 'public') continue; // always accessible
+
+      if (shareMode === 'public') {
+        // Tag is not public but view is being shared publicly
+        misaligned.push({ tag, lackingUsers: ['（所有用户）'] });
+      } else {
+        // 'specific': check each sharedWith user
+        const userNames = sharedWith.map(uid => SHARE_USER_NAMES[uid] ?? uid);
+        const lacking = userNames.filter(uName => !canUserAccessTag(uName, tag));
+        if (lacking.length > 0) {
+          misaligned.push({ tag, lackingUsers: lacking });
+        }
+      }
+    }
+
+    if (misaligned.length > 0) {
+      // Show alignment dialog instead of saving directly
+      setPendingShareAction({ viewId: id, shareMode, sharedWith, misalignedTags: misaligned });
+      return;
+    }
+
+    setViews(prev => prev.map(v => v.id === id ? { ...v, shareMode, sharedWith } : v));
+  };
+
+  const handleAlignAndShare = () => {
+    if (!pendingShareAction) return;
+    const { viewId, shareMode, sharedWith, misalignedTags } = pendingShareAction;
+    const userNames = sharedWith.map(uid => SHARE_USER_NAMES[uid] ?? uid);
+
+    // Expand tag permissions to cover the view's audience
+    setQuickTags(prev => prev.map(t => {
+      const m = misalignedTags.find(x => x.tag.id === t.id);
+      if (!m) return t;
+      if (shareMode === 'public') {
+        return { ...t, vis: 'public' as const, authUsers: [] };
+      } else {
+        // Expand partial: add lacking users to authUsers
+        const newAuth = [...t.authUsers, ...userNames.filter(u => !t.authUsers.includes(u))];
+        return { ...t, vis: 'partial' as const, authUsers: newAuth };
+      }
+    }));
+
+    setViews(prev => prev.map(v => v.id === viewId ? { ...v, shareMode, sharedWith } : v));
+    setPendingShareAction(null);
+    toast('已对齐标签权限并保存共享设置');
+  };
+
+  const handleShareAnyway = () => {
+    if (!pendingShareAction) return;
+    const { viewId, shareMode, sharedWith } = pendingShareAction;
+    setViews(prev => prev.map(v => v.id === viewId ? { ...v, shareMode, sharedWith } : v));
+    setPendingShareAction(null);
   };
 
   // Sheet operations
@@ -359,35 +611,54 @@ export default function App() {
                 onChangeLocalFilters={setLocalFilters}
               />
 
-              <DataTable
-                activeDims={currentSheetState.activeDims}
-                hasData={currentSheetState.hasData}
-                mergeView={mergeView}
-                activeFilter={
-                  currentSheetState.activeFilterId
-                    ? currentSheetState.filterCombinations.find(c => c.id === currentSheetState.activeFilterId) ?? null
-                    : null
-                }
-              />
+              {/* ── Scene 3: NO_PERMISSION empty state ── */}
+              {pageStatus.type === 'NO_PERMISSION' ? (
+                <NoPermissionView missingTagsInfo={pageStatus.missingTagsInfo} />
+              ) : (
+                <>
+                  <DataTable
+                    activeDims={currentSheetState.activeDims}
+                    hasData={currentSheetState.hasData}
+                    mergeView={mergeView}
+                    activeFilter={
+                      currentSheetState.activeFilterId
+                        ? currentSheetState.filterCombinations.find(c => c.id === currentSheetState.activeFilterId) ?? null
+                        : null
+                    }
+                  />
 
-              <Pagination
-                total={currentSheetState.hasData ? 1247701 : 0}
-                page={page}
-                pageSize={pageSize}
-                onPageChange={setPage}
-                onPageSizeChange={ps => { setPageSize(ps); setPage(1); }}
-              />
+                  <Pagination
+                    total={currentSheetState.hasData ? 1247701 : 0}
+                    page={page}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={ps => { setPageSize(ps); setPage(1); }}
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Quick tag modal */}
+      {/* Quick tag modal (with views for Scene 2 & 4) */}
       {showTagModal && (
         <QuickTagModal
           tags={quickTags}
+          views={views}
           onSave={tags => setQuickTags(tags)}
           onClose={() => setShowTagModal(false)}
+        />
+      )}
+
+      {/* ── Scene 1: Tag permission alignment dialog ── */}
+      {pendingShareAction && (
+        <TagPermAlignDialog
+          misalignedTags={pendingShareAction.misalignedTags}
+          shareMode={pendingShareAction.shareMode}
+          onAlign={handleAlignAndShare}
+          onSaveAnyway={handleShareAnyway}
+          onCancel={() => setPendingShareAction(null)}
         />
       )}
     </div>
