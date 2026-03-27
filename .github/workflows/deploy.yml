@@ -25,7 +25,7 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build -- --base=/-/
+      - run: npm run build -- --base=/cetus-pm/
 
       - uses: actions/configure-pages@v4
 
