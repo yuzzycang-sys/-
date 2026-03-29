@@ -1,15 +1,15 @@
 import React, { useState, useRef } from 'react';
 const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
-export const GRAN_LABELS: Record<string, string> = { day: '天', week: '周', month: '月' };
+export const GRAN_LABELS: Record<string, string> = { day: '天', week: '周', month: '月', total: '总' };
 
 /** Strip the leading gran prefix (e.g. "天-") to get the custom part */
 export function getCustomPart(name: string): string {
-  return name.replace(/^(?:天|周|月)-/, '');
+  return name.replace(/^(?:天|周|月|总)-/, '');
 }
 
 /** Build full sheet name from gran + custom part */
-export function buildFullName(gran: 'day' | 'week' | 'month', customPart: string): string {
+export function buildFullName(gran: 'day' | 'week' | 'month' | 'total', customPart: string): string {
   return customPart ? `${GRAN_LABELS[gran]}-${customPart}` : GRAN_LABELS[gran];
 }
 

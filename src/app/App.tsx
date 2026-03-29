@@ -51,7 +51,7 @@ type PendingShareAction = {
 
 // ── Per-sheet state ──────────────────────────────────────────
 interface SheetState {
-  timeGranularity: 'day' | 'week' | 'month';
+  timeGranularity: 'day' | 'week' | 'month' | 'total';
   activeDims: string[];    // committed dims (what DataTable shows)
   pendingDims: string[];   // dims selected in toolbar but not yet queried
   hasData: boolean;
@@ -309,7 +309,7 @@ export default function App() {
   };
 
   // When granularity changes, auto-update the sheet name prefix
-  const handleChangeGranularity = (g: 'day' | 'week' | 'month') => {
+  const handleChangeGranularity = (g: 'day' | 'week' | 'month' | 'total') => {
     const oldName = activeSheet;
     const customPart = getCustomPart(oldName);
     const newBase = buildFullName(g, customPart);
@@ -642,7 +642,15 @@ export default function App() {
                 timeGranularity={currentSheetState.timeGranularity}
                 onChangeGranularity={handleChangeGranularity}
                 activeDims={currentSheetState.pendingDims}
-                onChangeDims={dims => updateSheetState({ pendingDims: dims })}
+                onChangeDims={dims => {
+                  const prev = currentSheetState.pendingDims;
+                  const isReorder = dims.length === prev.length &&
+                    [...dims].sort().join() === [...prev].sort().join();
+                  // Reorder-only: immediately reflect in table; add/remove: pending only
+                  updateSheetState(isReorder
+                    ? { pendingDims: dims, activeDims: dims }
+                    : { pendingDims: dims });
+                }}
                 onApplyDimsToName={handleApplyDimsToName}
                 viewMode={viewMode}
                 onChangeViewMode={setViewMode}
@@ -673,6 +681,7 @@ export default function App() {
                     activeDims={currentSheetState.activeDims}
                     hasData={currentSheetState.hasData}
                     mergeView={mergeView}
+                    timeGranularity={currentSheetState.timeGranularity}
                     activeFilter={
                       currentSheetState.activeFilterId
                         ? currentSheetState.filterCombinations.find(c => c.id === currentSheetState.activeFilterId) ?? null

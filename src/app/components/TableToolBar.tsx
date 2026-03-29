@@ -8,8 +8,8 @@ import type { FilterCombination } from './MetricFilterPopover';
 import type { LocalFilters } from './LocalFilterPopover';
 
 interface Props {
-  timeGranularity: 'day' | 'week' | 'month';
-  onChangeGranularity: (g: 'day' | 'week' | 'month') => void;
+  timeGranularity: 'day' | 'week' | 'month' | 'total';
+  onChangeGranularity: (g: 'day' | 'week' | 'month' | 'total') => void;
   activeDims: string[];
   onChangeDims: (dims: string[]) => void;
   onApplyDimsToName?: (dims: string[]) => void;
@@ -252,8 +252,8 @@ function ToolbarBtn({ icon, label, onClick, active }: {
 }
 
 function GranularityPicker({ value, onChange }: {
-  value: 'day' | 'week' | 'month';
-  onChange: (v: 'day' | 'week' | 'month') => void;
+  value: 'day' | 'week' | 'month' | 'total';
+  onChange: (v: 'day' | 'week' | 'month' | 'total') => void;
 }) {
   return (
     <>
@@ -265,11 +265,12 @@ function GranularityPicker({ value, onChange }: {
       <Segmented
         size="small"
         value={value}
-        onChange={v => onChange(v as 'day' | 'week' | 'month')}
+        onChange={v => onChange(v as 'day' | 'week' | 'month' | 'total')}
         options={[
           { label: '天', value: 'day' },
           { label: '周', value: 'week' },
           { label: '月', value: 'month' },
+          { label: '总', value: 'total' },
         ]}
         className="gran-seg"
       />
