@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Table, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { Inbox, ChevronDown, ArrowDown, ArrowUp, PanelLeft } from 'lucide-react';
+import { Inbox, ChevronDown, ArrowDown, ArrowUp } from 'lucide-react';
 import type { FilterCombination } from './MetricFilterPopover';
 
 const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -74,7 +74,6 @@ const fmt = (n: number, decimals = 0) =>
 // ── Filter evaluation ──────────────────────────────────────────
 function evalRow(row: Row, combo: FilterCombination): boolean {
   if (!combo.groups.length) return true;
-  // Groups are OR; conditions within a group are AND
   return combo.groups.some(group => {
     if (!group.conditions.length) return true;
     return group.conditions.every(cond => {
@@ -101,7 +100,6 @@ function computeMergeSpans(rows: Row[], dimKeys: (keyof Row)[]): SpanCell[][] {
   const m = dimKeys.length;
   if (n === 0 || m === 0) return [];
 
-  // groupStarts[r][j] = true when row r begins a new visual group for col j
   const groupStarts: boolean[][] = rows.map(() => new Array(m).fill(false));
   for (let j = 0; j < m; j++) groupStarts[0][j] = true;
   for (let r = 1; r < n; r++) {
@@ -128,11 +126,7 @@ function computeMergeSpans(rows: Row[], dimKeys: (keyof Row)[]): SpanCell[][] {
 }
 
 // ── Sort dropdown ─────────────────────────────────────────────
-type DropdownState = {
-  colKey: string;
-  top: number;
-  left: number;
-} | null;
+type DropdownState = { colKey: string; top: number; left: number } | null;
 
 interface ColHeaderProps {
   label: string;
@@ -148,7 +142,6 @@ function ColHeader({ label, tooltip, colKey, sortColKey, sortDir, onOpenDropdown
   const btnRef = useRef<HTMLButtonElement>(null);
   const isActive = sortColKey === colKey;
   const showArrow = isActive && !hovered;
-  const showBtn = hovered;
 
   const inner = (
     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
@@ -181,7 +174,7 @@ function ColHeader({ label, tooltip, colKey, sortColKey, sortDir, onOpenDropdown
           background: '#1677ff',
           border: 'none',
           cursor: 'pointer',
-          display: showBtn ? 'flex' : 'none',
+          display: hovered ? 'flex' : 'none',
           alignItems: 'center',
           justifyContent: 'center',
           padding: 0,
@@ -206,9 +199,6 @@ export function DataTable({ activeDims, hasData, activeFilter, mergeView }: Prop
   const [sortColKey, setSortColKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc' | null>(null);
   const [dropdown, setDropdown] = useState<DropdownState>(null);
-  // null = default (last dim col); otherwise user-chosen boundary
-  type FreezeAt = { type: 'dim'; idx: number } | { type: 'metric'; idx: number } | null;
-  const [freezeAt, setFreezeAt] = useState<FreezeAt>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -236,7 +226,7 @@ export function DataTable({ activeDims, hasData, activeFilter, mergeView }: Prop
     .filter(k => !!DIM_COL_MAP[k])
     .map(k => ({ dimKey: k, ...DIM_COL_MAP[k] }));
 
-  // In merge view: sort by dims; in detail view: sort by sortKey/sortDir
+  // In merge view: sort by dims; in detail view: sort by sortColKey/sortDir
   const displayRows = mergeView
     ? [...rows].sort((a, b) => {
         for (const col of DIM_COLS) {
@@ -294,7 +284,6 @@ export function DataTable({ activeDims, hasData, activeFilter, mergeView }: Prop
   const totalDimW    = DIM_COLS.reduce((s, c) => s + c.width, 0);
   const totalMetricW = METRIC_COLS.reduce((s, c) => s + c.width, 0);
 
-  // Summary row helpers
   const mean = (key: keyof Row) =>
     rows.reduce((s, r) => s + (r[key] as number), 0) / rows.length;
   const sum  = (key: keyof Row) =>
@@ -305,104 +294,78 @@ export function DataTable({ activeDims, hasData, activeFilter, mergeView }: Prop
   };
 
   // Build antd columns
-  const dimColumns: ColumnsType<Row> = DIM_COLS.map((col, i) => {
-    const isLastDim = i === DIM_COLS.length - 1;
-    const isDimFreezeHere = freezeAt === null ? isLastDim : (freezeAt.type === 'dim' && freezeAt.idx === i);
-    const shadowStyle = isDimFreezeHere && (freezeAt === null || freezeAt.type === 'dim')
-      ? { boxShadow: '6px 0 8px -4px rgba(0,0,0,0.12)', clipPath: 'inset(0 -12px 0 0)' }
-      : {};
-    return {
-      title: mergeView
-        ? col.label
-        : (
-          <ColHeader
-            label={col.label}
-            colKey={col.dimKey}
-            sortColKey={sortColKey}
-            sortDir={sortDir}
-            onOpenDropdown={handleOpenDropdown}
-          />
-        ),
-      dataIndex: col.rowKey,
-      key: col.dimKey,
-      fixed: 'left' as const,
-      width: col.width,
-      align: 'center' as const,
-      onHeaderCell: () => ({ style: { textAlign: 'center' as const, ...shadowStyle } }),
-      ...(mergeView
-        ? {
-            sorter: (a: Row, b: Row) =>
-              String(a[col.rowKey]).localeCompare(String(b[col.rowKey]), 'zh-CN'),
-          }
-        : {}),
-      ...(mergeView && spanInfo
-        ? {
-            onCell: (_record: Row, rowIndex?: number) => {
-              if (rowIndex === undefined) return {};
-              const si = spanInfo[rowIndex][i];
-              return { rowSpan: si.render ? si.rowspan : 0, style: shadowStyle };
-            },
-          }
-        : {
-            onCell: isLastDim ? () => ({ style: shadowStyle }) : undefined,
-          }),
-      render: (val: unknown) => String(val),
-    };
-  });
+  const dimColumns: ColumnsType<Row> = DIM_COLS.map((col, i) => ({
+    title: mergeView
+      ? col.label
+      : (
+        <ColHeader
+          label={col.label}
+          colKey={col.dimKey}
+          sortColKey={sortColKey}
+          sortDir={sortDir}
+          onOpenDropdown={handleOpenDropdown}
+        />
+      ),
+    dataIndex: col.rowKey,
+    key: col.dimKey,
+    fixed: 'left' as const,
+    width: col.width,
+    align: 'center' as const,
+    onHeaderCell: () => ({ style: { textAlign: 'center' as const } }),
+    ...(mergeView
+      ? {
+          sorter: (a: Row, b: Row) =>
+            String(a[col.rowKey]).localeCompare(String(b[col.rowKey]), 'zh-CN'),
+        }
+      : {}),
+    ...(mergeView && spanInfo
+      ? {
+          onCell: (_record: Row, rowIndex?: number) => {
+            if (rowIndex === undefined) return {};
+            const si = spanInfo[rowIndex][i];
+            return { rowSpan: si.render ? si.rowspan : 0 };
+          },
+        }
+      : {}),
+    render: (val: unknown) => String(val),
+  }));
 
-  const metricColumns: ColumnsType<Row> = METRIC_COLS.map((col, mi) => {
-    const isFrozen = !mergeView && freezeAt?.type === 'metric' && mi <= freezeAt.idx;
-    const isLastFrozen = !mergeView && freezeAt?.type === 'metric' && mi === freezeAt.idx;
-    return {
-      title: mergeView
-        ? (
-          <Tooltip title={col.tooltip} placement="top">
-            <span style={{ cursor: 'pointer' }}>{col.label}</span>
-          </Tooltip>
-        )
-        : (
-          <ColHeader
-            label={col.label}
-            tooltip={col.tooltip}
-            colKey={String(col.key)}
-            sortColKey={sortColKey}
-            sortDir={sortDir}
-            onOpenDropdown={handleOpenDropdown}
-          />
-        ),
-      dataIndex: col.key,
-      key: String(col.key),
-      width: col.width,
-      fixed: isFrozen ? 'left' as const : undefined,
-      onHeaderCell: () => ({
-        style: {
-          textAlign: 'center' as const,
-          ...(isLastFrozen ? { boxShadow: '6px 0 8px -4px rgba(0,0,0,0.12)', clipPath: 'inset(0 -12px 0 0)' } : {}),
-        },
-      }),
-      onCell: () => ({
-        style: {
-          textAlign: 'right' as const,
-          ...(isLastFrozen ? { boxShadow: '6px 0 8px -4px rgba(0,0,0,0.12)', clipPath: 'inset(0 -12px 0 0)' } : {}),
-        },
-      }),
-      ...(mergeView
-        ? {
-            sorter: (a: Row, b: Row) =>
-              (a[col.key] as number) - (b[col.key] as number),
-          }
-        : {}),
-      render: (val: number) => fmt(val, col.decimals ?? 0),
-    };
-  });
+  const metricColumns: ColumnsType<Row> = METRIC_COLS.map(col => ({
+    title: mergeView
+      ? (
+        <Tooltip title={col.tooltip} placement="top">
+          <span style={{ cursor: 'pointer' }}>{col.label}</span>
+        </Tooltip>
+      )
+      : (
+        <ColHeader
+          label={col.label}
+          tooltip={col.tooltip}
+          colKey={String(col.key)}
+          sortColKey={sortColKey}
+          sortDir={sortDir}
+          onOpenDropdown={handleOpenDropdown}
+        />
+      ),
+    dataIndex: col.key,
+    key: String(col.key),
+    width: col.width,
+    onHeaderCell: () => ({ style: { textAlign: 'center' as const } }),
+    onCell: () => ({ style: { textAlign: 'right' as const } }),
+    ...(mergeView
+      ? {
+          sorter: (a: Row, b: Row) =>
+            (a[col.key] as number) - (b[col.key] as number),
+        }
+      : {}),
+    render: (val: number) => fmt(val, col.decimals ?? 0),
+  }));
 
   const columns: ColumnsType<Row> = [...dimColumns, ...metricColumns];
 
-  const activeDropdownDimCol = dropdown ? DIM_COLS.find(c => c.dimKey === dropdown.colKey) : null;
-  const activeDropdownMetricCol = dropdown ? METRIC_COLS.find(c => String(c.key) === dropdown.colKey) : null;
-  const activeDropdownDimIdx = activeDropdownDimCol ? DIM_COLS.indexOf(activeDropdownDimCol) : -1;
-  const activeDropdownMetricIdx = activeDropdownMetricCol ? METRIC_COLS.indexOf(activeDropdownMetricCol) : -1;
-  const isDimDropdown = !!activeDropdownDimCol;
+  const activeDropdownCol = dropdown
+    ? (DIM_COLS.find(c => c.dimKey === dropdown.colKey) || METRIC_COLS.find(c => String(c.key) === dropdown.colKey))
+    : null;
 
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '0 16px' }}>
@@ -445,51 +408,32 @@ export function DataTable({ activeDims, hasData, activeFilter, mergeView }: Prop
         rowClassName={(record) => (hoveredRow === record.id ? 'ant-table-row-hover' : '')}
         summary={() => (
           <Table.Summary fixed>
-            {/* Average row */}
             <Table.Summary.Row style={{ background: '#fafafa' }}>
               {DIM_COLS.map((col, i) => (
-                <Table.Summary.Cell
-                  key={col.dimKey}
-                  index={i}
-                  align="center"
-                >
+                <Table.Summary.Cell key={col.dimKey} index={i} align="center">
                   <span style={{ fontSize: 12, fontWeight: 400, color: '#595959' }}>
                     {i === 0 ? '平均值' : ''}
                   </span>
                 </Table.Summary.Cell>
               ))}
               {METRIC_COLS.map((col, i) => (
-                <Table.Summary.Cell
-                  key={String(col.key)}
-                  index={DIM_COLS.length + i}
-                  align="right"
-                >
+                <Table.Summary.Cell key={String(col.key)} index={DIM_COLS.length + i} align="right">
                   <span style={{ fontSize: 12, fontWeight: 400, color: '#595959' }}>
                     {fmt(mean(col.key), col.decimals ?? 0)}
                   </span>
                 </Table.Summary.Cell>
               ))}
             </Table.Summary.Row>
-
-            {/* Total row */}
             <Table.Summary.Row style={{ background: '#eef2ff' }}>
               {DIM_COLS.map((col, i) => (
-                <Table.Summary.Cell
-                  key={col.dimKey}
-                  index={i}
-                  align="center"
-                >
+                <Table.Summary.Cell key={col.dimKey} index={i} align="center">
                   <span style={{ fontSize: 12, fontWeight: 600, color: '#1677ff' }}>
                     {i === 0 ? '总计' : ''}
                   </span>
                 </Table.Summary.Cell>
               ))}
               {METRIC_COLS.map((col, i) => (
-                <Table.Summary.Cell
-                  key={String(col.key)}
-                  index={DIM_COLS.length + i}
-                  align="right"
-                >
+                <Table.Summary.Cell key={String(col.key)} index={DIM_COLS.length + i} align="right">
                   <span style={{ fontSize: 12, fontWeight: 600, color: '#1677ff' }}>
                     {fmt(AVG_KEYS.has(col.key) ? mean(col.key) : sum(col.key), col.decimals ?? 0)}
                   </span>
@@ -501,7 +445,7 @@ export function DataTable({ activeDims, hasData, activeFilter, mergeView }: Prop
       />
 
       {/* Sort dropdown overlay */}
-      {dropdown && (activeDropdownDimCol || activeDropdownMetricCol) && (
+      {dropdown && activeDropdownCol && (
         <div
           ref={dropdownRef}
           style={{
@@ -518,47 +462,19 @@ export function DataTable({ activeDims, hasData, activeFilter, mergeView }: Prop
             fontFamily: F,
           }}
         >
-          {/* Desc */}
           <button
-            onClick={() => {
-              setSortColKey(dropdown.colKey);
-              setSortDir('desc');
-              setDropdown(null);
-            }}
+            onClick={() => { setSortColKey(dropdown.colKey); setSortDir('desc'); setDropdown(null); }}
             style={menuItemStyle(sortColKey === dropdown.colKey && sortDir === 'desc')}
           >
             <ArrowDown size={14} color={sortColKey === dropdown.colKey && sortDir === 'desc' ? '#1677ff' : '#595959'} strokeWidth={2} />
             <span>降序排序</span>
           </button>
-          {/* Asc */}
           <button
-            onClick={() => {
-              setSortColKey(dropdown.colKey);
-              setSortDir('asc');
-              setDropdown(null);
-            }}
+            onClick={() => { setSortColKey(dropdown.colKey); setSortDir('asc'); setDropdown(null); }}
             style={menuItemStyle(sortColKey === dropdown.colKey && sortDir === 'asc')}
           >
             <ArrowUp size={14} color={sortColKey === dropdown.colKey && sortDir === 'asc' ? '#1677ff' : '#595959'} strokeWidth={2} />
             <span>升序排序</span>
-          </button>
-          {/* Divider */}
-          <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
-          {/* Freeze — dim cols are always frozen, show as active but no-op */}
-          <button
-            onClick={() => {
-              // Dim cols are always fixed left; clicking freeze resets any metric freeze
-              if (isDimDropdown) {
-                setFreezeAt({ type: 'dim', idx: activeDropdownDimIdx });
-              } else {
-                setFreezeAt({ type: 'metric', idx: activeDropdownMetricIdx });
-              }
-              setDropdown(null);
-            }}
-            style={menuItemStyle(false)}
-          >
-            <PanelLeft size={14} color="#595959" strokeWidth={2} />
-            <span>冻结至此列</span>
           </button>
         </div>
       )}
