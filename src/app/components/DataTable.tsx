@@ -439,7 +439,7 @@ export function DataTable({ activeDims, hasData, activeFilter, mergeView, timeGr
     const freezeDimIdx = freezeBoundary?.type === 'dim'
       ? DIM_COLS.findIndex(c => c.dimKey === freezeBoundary.key) : -1;
     const isDimFrozen = mergeView
-      ? (freezeBoundary?.type === 'metric')
+      ? (freezeBoundary?.type === 'metric' || (freezeBoundary?.type === 'dim' && i <= freezeDimIdx))
       : (freezeBoundary === null || freezeBoundary.type === 'metric' || i <= freezeDimIdx);
     const isLastDim = i === DIM_COLS.length - 1;
     const isBoundary = freezeBoundary === null ? isLastDim
@@ -638,6 +638,17 @@ export function DataTable({ activeDims, hasData, activeFilter, mergeView, timeGr
                   </div>
                 );
               })}
+              <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
+              <button
+                onClick={() => {
+                  setFreezeBoundary({ type: 'dim', key: DIM_COLS[ddDimIdx].dimKey });
+                  setDropdown(null);
+                }}
+                style={menuItemStyle(false)}
+              >
+                <PanelLeft size={14} color="#595959" strokeWidth={2} />
+                <span>冻结至此列</span>
+              </button>
             </>
           ) : mergeView && !isDimDropdown ? (
             /* Merge view metric col: freeze only */

@@ -272,7 +272,7 @@ export default function App() {
 
   // Sheets — each sheet has its own state
   const [sheets, setSheets] = useState<string[]>(INITIAL_SHEETS);
-  const [activeSheet, setActiveSheet] = useState<string>('sheet1');
+  const [activeSheet, setActiveSheet] = useState<string>('天-sheet1');
   const [sheetStates, setSheetStates] = useState<Record<string, SheetState>>(INITIAL_SHEET_STATES);
 
   // Local filters — temporary, cleared on sheet switch
@@ -714,6 +714,7 @@ export default function App() {
       )}
 
       <ExportModal
+        key={isExportModalVisible ? activeSheet : '__closed__'}
         open={isExportModalVisible}
         onClose={() => setIsExportModalVisible(false)}
         sheets={sheets}

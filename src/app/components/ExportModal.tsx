@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Modal, Checkbox, message } from 'antd';
 
 interface ExportModalProps {
@@ -27,13 +27,6 @@ export function ExportModal({
 }: ExportModalProps) {
   const [checkedSheets, setCheckedSheets] = useState<string[]>([activeSheet]);
   const [loading, setLoading] = useState(false);
-
-  // 每次打开时，重置为仅勾选当前 sheet
-  useEffect(() => {
-    if (open) {
-      setCheckedSheets([activeSheet]);
-    }
-  }, [open, activeSheet]);
 
   const allChecked = useMemo(
     () => checkedSheets.length === sheets.length,
@@ -92,17 +85,19 @@ export function ExportModal({
           全选
         </Checkbox>
       </div>
-      <Checkbox.Group
-        value={checkedSheets}
-        onChange={vals => setCheckedSheets(vals as string[])}
-        style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
-      >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {sheets.map(sheet => (
-          <Checkbox key={sheet} value={sheet}>
+          <Checkbox
+            key={sheet}
+            checked={checkedSheets.includes(sheet)}
+            onChange={e => setCheckedSheets(prev =>
+              e.target.checked ? [...prev, sheet] : prev.filter(s => s !== sheet)
+            )}
+          >
             {sheet}
           </Checkbox>
         ))}
-      </Checkbox.Group>
+      </div>
     </Modal>
   );
 }
