@@ -15,9 +15,13 @@ const TEXT_INPUT_KEYS = new Set([
   'subChannel',
 ]);
 const TEXT_INPUT_ENTITY_LABELS: Record<string, string> = {
-  accountId: '账号', projectId: '项目', adId: '广告',
-  mediaCreativeId: '素材ID', mediaCreativeMd5: '素材MD5', creativeName: '素材名',
+  accountId: '账户', projectId: '项目', adId: '广告',
+  mediaCreativeId: '媒体素材', mediaCreativeMd5: '媒体素材', creativeName: '素材',
   subChannel: '子渠道',
+};
+// For MD5 fields, use 'MD5' as the id-type label instead of 'ID'
+const TEXT_INPUT_ID_LABELS: Record<string, string> = {
+  mediaCreativeMd5: 'MD5',
 };
 import { FILTER_CHIP_DATA } from './filterConfig';
 
@@ -134,49 +138,47 @@ export function FilterBar({
           <Divider type="vertical" style={{ height: 20 }} />
           <div style={{ display: 'contents' }}>
             {activeFilters.map(key => {
-              const cfg = FILTER_CHIP_DATA[key];
-              if (!cfg) {
-                // Special case for priceRange
-                if (key === 'priceRange') {
-                  return (
-                    <div key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      <span style={{ fontSize: 13, color: '#333', whiteSpace: 'nowrap', fontWeight: 400 }}>出价范围</span>
-                      <button
-                        ref={priceBtnRef}
-                        onClick={handleOpenPriceRange}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          height: 28, fontSize: 13, fontWeight: 400, whiteSpace: 'nowrap',
-                          border: `1px solid ${showPriceRange ? '#1677ff' : '#e0e0e0'}`,
-                          borderRadius: 6, padding: '0 8px 0 10px', width: 110,
-                          background: '#fff', cursor: 'pointer', outline: 'none',
-                          transition: 'border-color 0.15s',
-                        }}
-                      >
-                        <span style={{
-                          flex: 1, color: priceRangeActive ? '#1677ff' : '#bbb',
-                          maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                          {priceRangeSummary}
-                        </span>
-                        <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </button>
-                    </div>
-                  );
-                }
-                return null;
+              // Special case for priceRange
+              if (key === 'priceRange') {
+                return (
+                  <div key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, color: '#333', whiteSpace: 'nowrap', fontWeight: 400 }}>出价范围</span>
+                    <button
+                      ref={priceBtnRef}
+                      onClick={handleOpenPriceRange}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        height: 28, fontSize: 13, fontWeight: 400, whiteSpace: 'nowrap',
+                        border: `1px solid ${showPriceRange ? '#1677ff' : '#e0e0e0'}`,
+                        borderRadius: 6, padding: '0 8px 0 10px', width: 110,
+                        background: '#fff', cursor: 'pointer', outline: 'none',
+                        transition: 'border-color 0.15s',
+                      }}
+                    >
+                      <span style={{
+                        flex: 1, color: priceRangeActive ? '#1677ff' : '#bbb',
+                        maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {priceRangeSummary}
+                      </span>
+                      <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                  </div>
+                );
               }
 
               const isLocked = !!channelLocked && (key === 'mainChannel' || key === 'subChannel');
+
+              const cfg = FILTER_CHIP_DATA[key];
 
               // 广告创建时间：日期范围选择器，与消耗时间保持一致
               if (DATE_RANGE_KEYS.has(key)) {
                 const sel = filterSelections[key] || [];
                 return (
                   <div key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    <span style={{ fontSize: 13, color: '#333', whiteSpace: 'nowrap', fontWeight: 400 }}>{cfg.label}</span>
+                    <span style={{ fontSize: 13, color: '#333', whiteSpace: 'nowrap', fontWeight: 400 }}>{cfg?.label ?? key}</span>
                     <DateRangeTrigger
                       start={sel[0] || ''}
                       end={sel[1] || ''}
@@ -194,6 +196,7 @@ export function FilterBar({
                   <div key={key} style={{ position: 'relative', opacity: isLocked ? 0.45 : 1 }}>
                     <AccountInputChip
                       entityLabel={entityLabel}
+                      idLabel={TEXT_INPUT_ID_LABELS[key]}
                       selected={filterSelections[key] || []}
                       onChange={sel => onFilterSelect(key, sel)}
                       exclude={isAccountKey ? accountExclude : !!filterExcludes[key]}
@@ -210,6 +213,8 @@ export function FilterBar({
                   </div>
                 );
               }
+
+              if (!cfg) return null;
 
               return (
                 <div key={key} style={{ position: 'relative', opacity: isLocked ? 0.45 : 1 }}>
