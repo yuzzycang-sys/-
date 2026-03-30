@@ -47,9 +47,8 @@ export function AllFiltersPopover({ activeFilters, onToggleFilter, onClearAll, o
         {FILTER_GROUPS.map((group, gi) => (
           <div key={group.group} style={{ marginBottom: gi < FILTER_GROUPS.length - 1 ? 16 : 0 }}>
             <div style={{
-              fontSize: 12, fontWeight: 500, color: '#8c8c8c',
-              marginBottom: 8, paddingBottom: 5,
-              borderBottom: '1px solid #f0f0f0',
+              fontSize: 12, color: '#8c8c8c',
+              marginBottom: 8,
             }}>
               {group.group}
             </div>
