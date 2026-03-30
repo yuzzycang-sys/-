@@ -16,16 +16,65 @@ type Row = {
   roi1: number; roi2: number; roi3: number; roi7: number; roi15: number; roi30: number; roi60: number;
 };
 
-const DATA: Row[] = [
-  { id: '1', date: '2026-02-01', media: '腾讯', optimizer: '张磊',  game: '鱼乐', channel: '品牌', os: 'Android', region: '华东', adtype: '图文',   spend: 52341, newDevices: 8234, newDeviceCost: 6.35, newPaidUsers: 412, newPaidCost: 127.0, ltv1: 0.12, ltv3: 0.35, ltv7: 0.89, ltv15: 1.24, ltv30: 1.56, ltv60: 2.14, roi1: 0.08, roi2: 0.14, roi3: 0.22, roi7: 0.62, roi15: 0.86, roi30: 1.09, roi60: 1.49 },
-  { id: '2', date: '2026-02-01', media: '字节', optimizer: '李明',  game: '大咖', channel: '效果', os: 'iOS',     region: '华南', adtype: '视频',   spend: 38920, newDevices: 6120, newDeviceCost: 6.36, newPaidUsers: 310, newPaidCost: 125.5, ltv1: 0.11, ltv3: 0.32, ltv7: 0.84, ltv15: 1.18, ltv30: 1.51, ltv60: 2.08, roi1: 0.07, roi2: 0.13, roi3: 0.21, roi7: 0.60, roi15: 0.83, roi30: 1.06, roi60: 1.43 },
-  { id: '3', date: '2026-02-01', media: '腾讯', optimizer: '王芳',  game: '鱼乐', channel: '品牌', os: 'Android', region: '华北', adtype: '图文',   spend: 29150, newDevices: 4580, newDeviceCost: 6.36, newPaidUsers: 228, newPaidCost: 127.9, ltv1: 0.13, ltv3: 0.37, ltv7: 0.91, ltv15: 1.28, ltv30: 1.59, ltv60: 2.19, roi1: 0.09, roi2: 0.15, roi3: 0.23, roi7: 0.63, roi15: 0.88, roi30: 1.11, roi60: 1.52 },
-  { id: '4', date: '2026-02-01', media: '字节', optimizer: '陈刚',  game: '大咖', channel: '效果', os: 'iOS',     region: '西南', adtype: '开屏',   spend: 45670, newDevices: 7230, newDeviceCost: 6.32, newPaidUsers: 368, newPaidCost: 124.1, ltv1: 0.10, ltv3: 0.30, ltv7: 0.82, ltv15: 1.15, ltv30: 1.48, ltv60: 2.03, roi1: 0.07, roi2: 0.12, roi3: 0.20, roi7: 0.58, roi15: 0.81, roi30: 1.04, roi60: 1.40 },
-  { id: '5', date: '2026-02-02', media: '腾讯', optimizer: '张磊',  game: '鱼乐', channel: '品牌', os: 'Android', region: '华东', adtype: '视频',   spend: 48920, newDevices: 7840, newDeviceCost: 6.24, newPaidUsers: 398, newPaidCost: 122.9, ltv1: 0.14, ltv3: 0.38, ltv7: 0.93, ltv15: 1.30, ltv30: 1.62, ltv60: 2.22, roi1: 0.09, roi2: 0.16, roi3: 0.24, roi7: 0.65, roi15: 0.90, roi30: 1.13, roi60: 1.54 },
-  { id: '6', date: '2026-02-02', media: '字节', optimizer: '李明',  game: '大咖', channel: '效果', os: 'iOS',     region: '华南', adtype: '信息流', spend: 35680, newDevices: 5620, newDeviceCost: 6.35, newPaidUsers: 283, newPaidCost: 126.1, ltv1: 0.11, ltv3: 0.33, ltv7: 0.86, ltv15: 1.20, ltv30: 1.53, ltv60: 2.10, roi1: 0.08, roi2: 0.13, roi3: 0.21, roi7: 0.61, roi15: 0.84, roi30: 1.07, roi60: 1.44 },
-  { id: '7', date: '2026-02-02', media: '腾讯', optimizer: '王芳',  game: '鱼乐', channel: '品牌', os: 'Android', region: '华北', adtype: '图文',   spend: 31240, newDevices: 4920, newDeviceCost: 6.35, newPaidUsers: 247, newPaidCost: 126.5, ltv1: 0.12, ltv3: 0.36, ltv7: 0.90, ltv15: 1.26, ltv30: 1.57, ltv60: 2.16, roi1: 0.08, roi2: 0.14, roi3: 0.22, roi7: 0.62, roi15: 0.87, roi30: 1.10, roi60: 1.50 },
-  { id: '8', date: '2026-02-02', media: '字节', optimizer: '陈刚',  game: '大咖', channel: '效果', os: 'iOS',     region: '西南', adtype: '开屏',   spend: 42310, newDevices: 6680, newDeviceCost: 6.33, newPaidUsers: 340, newPaidCost: 124.4, ltv1: 0.10, ltv3: 0.31, ltv7: 0.83, ltv15: 1.16, ltv30: 1.49, ltv60: 2.05, roi1: 0.07, roi2: 0.12, roi3: 0.20, roi7: 0.59, roi15: 0.82, roi30: 1.05, roi60: 1.41 },
+// ── Mock data generator ────────────────────────────────────────
+const COMBOS: Omit<Row, 'id' | 'date' | 'spend' | 'newDevices' | 'newDeviceCost' | 'newPaidUsers' | 'newPaidCost' | 'ltv1' | 'ltv3' | 'ltv7' | 'ltv15' | 'ltv30' | 'ltv60' | 'roi1' | 'roi2' | 'roi3' | 'roi7' | 'roi15' | 'roi30' | 'roi60'>[] = [
+  { media: '腾讯', optimizer: '张磊', game: '鱼乐', channel: '品牌', os: 'Android', region: '华东', adtype: '图文'   },
+  { media: '腾讯', optimizer: '王芳', game: '鱼乐', channel: '品牌', os: 'iOS',     region: '华南', adtype: '视频'   },
+  { media: '字节', optimizer: '李明', game: '大咖', channel: '效果', os: 'Android', region: '华北', adtype: '信息流' },
+  { media: '字节', optimizer: '陈刚', game: '大咖', channel: '效果', os: 'iOS',     region: '西南', adtype: '开屏'   },
+  { media: '快手', optimizer: '赵云', game: '捕鱼', channel: '效果', os: 'Android', region: '华东', adtype: '视频'   },
+  { media: '快手', optimizer: '刘洋', game: '捕鱼', channel: '效果', os: 'iOS',     region: '华北', adtype: '信息流' },
+  { media: '微博', optimizer: '吴静', game: '鱼乐', channel: '品牌', os: 'iOS',     region: '华南', adtype: '图文'   },
+  { media: '微博', optimizer: '郑强', game: '大咖', channel: '品牌', os: 'Android', region: '西南', adtype: '视频'   },
 ];
+
+// Base metrics per combo (spend scale differs to make sort demos obvious)
+const BASE_METRICS = [
+  { spend: 52000, nd: 8200, pu: 410 },
+  { spend: 29000, nd: 4600, pu: 228 },
+  { spend: 38000, nd: 6100, pu: 305 },
+  { spend: 45000, nd: 7200, pu: 365 },
+  { spend: 21000, nd: 3400, pu: 168 },
+  { spend: 18000, nd: 2900, pu: 145 },
+  { spend: 13000, nd: 2100, pu: 105 },
+  { spend: 11000, nd: 1800, pu:  90 },
+];
+
+function genDate(offsetDays: number): string {
+  const d = new Date('2026-01-26');
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
+function r(base: number, noise: number) { return Math.round(base * (1 + (Math.random() - 0.5) * noise)); }
+function rf(base: number, noise: number) { return Math.round(base * (1 + (Math.random() - 0.5) * noise) * 100) / 100; }
+
+const DATA: Row[] = (() => {
+  const rows: Row[] = [];
+  let id = 1;
+  for (let day = 0; day < 21; day++) {
+    const date = genDate(day);
+    COMBOS.forEach((combo, ci) => {
+      const bm = BASE_METRICS[ci];
+      const spend       = r(bm.spend, 0.12);
+      const newDevices  = r(bm.nd, 0.12);
+      const newPaidUsers= r(bm.pu, 0.15);
+      rows.push({
+        id: String(id++), date, ...combo,
+        spend, newDevices,
+        newDeviceCost:  rf(spend / newDevices, 0.05),
+        newPaidUsers,
+        newPaidCost:    rf(spend / newPaidUsers, 0.05),
+        ltv1:  rf(0.12, 0.2), ltv3:  rf(0.35, 0.2), ltv7:  rf(0.88, 0.2),
+        ltv15: rf(1.25, 0.2), ltv30: rf(1.57, 0.2), ltv60: rf(2.15, 0.2),
+        roi1:  rf(0.08, 0.2), roi2:  rf(0.14, 0.2), roi3:  rf(0.22, 0.2),
+        roi7:  rf(0.62, 0.2), roi15: rf(0.87, 0.2), roi30: rf(1.10, 0.2),
+        roi60: rf(1.50, 0.2),
+      });
+    });
+  }
+  return rows;
+})();
 
 const DIM_COL_MAP: Record<string, { rowKey: keyof Row; label: string; width: number }> = {
   time:      { rowKey: 'date',      label: '时间',     width: 104 },

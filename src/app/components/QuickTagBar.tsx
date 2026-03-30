@@ -84,16 +84,20 @@ function getColorStyles(color: string) {
   return { border: hex, bg: hex + '18', text: hex, cbBg: hex };
 }
 
+const COLLAPSED_COUNT = 15;
+
 /* ── Bar component ────────────────────────────────────────── */
 interface Props {
   tags: QuickTag[];
   onToggleTag: (id: string) => void;
   onManage: () => void;
-  onReorderTags?: (tags: QuickTag[]) => void;  // 新增
+  onReorderTags?: (tags: QuickTag[]) => void;
 }
 
 export function QuickTagBar({ tags, onToggleTag, onManage, onReorderTags }: Props) {
+  const [expanded, setExpanded] = useState(false);
   const [dragId, setDragId] = React.useState<string|null>(null);
+
   const handleDragStart = (id: string) => setDragId(id);
   const handleDrop = (targetId: string) => {
     if (!dragId || dragId === targetId || !onReorderTags) return;
@@ -107,38 +111,69 @@ export function QuickTagBar({ tags, onToggleTag, onManage, onReorderTags }: Prop
     setDragId(null);
   };
 
+  const visible = expanded ? tags : tags.slice(0, COLLAPSED_COUNT);
+  const hiddenCount = tags.length - COLLAPSED_COUNT;
+  const needsToggle = tags.length > COLLAPSED_COUNT;
+
   return (
     <div style={{
-      display: 'flex', alignItems: 'center',
-      borderBottom: 'none', padding: '4px 16px 12px',
-      background: 'transparent', gap: 8, flexShrink: 0, fontFamily: F,
+      padding: '4px 16px 10px',
+      background: 'transparent',
+      fontFamily: F,
+      flexShrink: 0,
     }}>
-      <Button
-        type="link"
-        size="small"
-        icon={<Settings2 size={12} />}
-        onClick={onManage}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          fontSize: 12, padding: 0, height: 'auto', flexShrink: 0,
-          color: '#1890ff',
-        }}
-      >
-        快捷标签
-      </Button>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        {/* Left: manage button — pinned top */}
+        <Button
+          type="link"
+          size="small"
+          icon={<Settings2 size={12} />}
+          onClick={onManage}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            fontSize: 12, padding: 0, height: 24, flexShrink: 0,
+            color: '#1890ff', marginTop: 2,
+          }}
+        >
+          快捷标签
+        </Button>
 
-      {tags.map(tag => {
-        const s = getColorStyles(tag.color);
-        return (
-          <div key={tag.id} draggable onDragStart={() => handleDragStart(tag.id)}
-            onDragOver={e => e.preventDefault()} onDrop={() => handleDrop(tag.id)}
-            style={{ opacity: dragId === tag.id ? 0.5 : 1 }}>
-            <TagItem tag={tag} styles={s} onToggle={() => onToggleTag(tag.id)} />
-          </div>
-        );
-      })}
+        {/* Divider */}
+        <div style={{ width: 1, background: '#e8e8e8', alignSelf: 'stretch', flexShrink: 0, margin: '2px 0' }} />
 
+        {/* Tags wrap area */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1, alignItems: 'center' }}>
+          {visible.map(tag => {
+            const s = getColorStyles(tag.color);
+            return (
+              <div key={tag.id} draggable onDragStart={() => handleDragStart(tag.id)}
+                onDragOver={e => e.preventDefault()} onDrop={() => handleDrop(tag.id)}
+                style={{ opacity: dragId === tag.id ? 0.5 : 1 }}>
+                <TagItem tag={tag} styles={s} onToggle={() => onToggleTag(tag.id)} />
+              </div>
+            );
+          })}
 
+          {/* Toggle button */}
+          {needsToggle && (
+            <button
+              onClick={() => setExpanded(v => !v)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3,
+                height: 24, padding: '0 8px', fontSize: 12,
+                border: '1px solid #d9d9d9', borderRadius: 4,
+                background: '#fafafa', color: '#595959',
+                cursor: 'pointer', outline: 'none', flexShrink: 0,
+              }}
+            >
+              {expanded
+                ? '收起'
+                : (<>展开 <span style={{ color: '#1677ff', fontWeight: 500 }}>+{hiddenCount}</span></>)
+              }
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

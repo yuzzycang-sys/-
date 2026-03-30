@@ -8,7 +8,17 @@ const DATE_RANGE_KEYS = new Set(['adCreateTime']);
 import { PriceRangePicker } from './PriceRangePicker';
 import { MultiSelectChip } from './MultiSelectChip';
 import { AccountInputChip } from './AccountInputChip';
-const TEXT_INPUT_KEYS = new Set(['accountId', 'adId']);
+// Keys that render as free-text multi-input (AccountInputChip) instead of dropdown
+const TEXT_INPUT_KEYS = new Set([
+  'accountId', 'projectId', 'adId',
+  'mediaCreativeId', 'mediaCreativeMd5', 'creativeName',
+  'subChannel',
+]);
+const TEXT_INPUT_ENTITY_LABELS: Record<string, string> = {
+  accountId: '账号', projectId: '项目', adId: '广告',
+  mediaCreativeId: '素材ID', mediaCreativeMd5: '素材MD5', creativeName: '素材名',
+  subChannel: '子渠道',
+};
 import { FILTER_CHIP_DATA } from './filterConfig';
 
 const F = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -97,7 +107,7 @@ export function FilterBar({
         所有筛选
       </Button>
 
-      {/* ── 消耗时间（permanent，无竖线） ── */}
+      {/* ── 消耗时间（永久） ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <span style={{ fontSize: 13, color: '#595959', whiteSpace: 'nowrap' }}>消耗时间</span>
         <DateRangeTrigger
@@ -107,6 +117,16 @@ export function FilterBar({
           clearable={false}
         />
       </div>
+
+      {/* ── 数据口径（永久，必填） ── */}
+      <MultiSelectChip
+        label="数据口径"
+        options={FILTER_CHIP_DATA['dataScope']?.options ?? []}
+        selected={filterSelections['dataScope'] || ['去刷号']}
+        onChange={sel => onFilterSelect('dataScope', sel.length ? sel : ['去刷号'])}
+        exclude={false}
+        onExcludeChange={() => {}}
+      />
 
       {/* ── Active filter chips（有竖分割线） ── */}
       {activeFilters.length > 0 && (
@@ -167,35 +187,20 @@ export function FilterBar({
                 );
               }
 
-              // 账号ID/名称：走专用文本输入组件
-              if (key === 'accountId') {
-                return (
-                  <div key={key} style={{ position: 'relative', opacity: isLocked ? 0.45 : 1 }}>
-                    <AccountInputChip
-                      selected={filterSelections[key] || []}
-                      onChange={sel => onFilterSelect(key, sel)}
-                      exclude={accountExclude}
-                      onExcludeChange={setAccountExclude}
-                    />
-                    {isLocked && (
-                      <div onClick={e => { e.stopPropagation(); onChannelLockedClick?.(); }}
-                        style={{ position: 'absolute', inset: 0, cursor: 'not-allowed', pointerEvents: 'auto' }} />
-                    )}
-                  </div>
-                );
-              }
-
               if (TEXT_INPUT_KEYS.has(key)) {
-                const entityLabel = key === 'adId' ? '广告' : '账号';
+                const isAccountKey = key === 'accountId';
+                const entityLabel = TEXT_INPUT_ENTITY_LABELS[key] ?? key;
                 return (
                   <div key={key} style={{ position: 'relative', opacity: isLocked ? 0.45 : 1 }}>
                     <AccountInputChip
                       entityLabel={entityLabel}
                       selected={filterSelections[key] || []}
                       onChange={sel => onFilterSelect(key, sel)}
-                      exclude={!!filterExcludes[key]}
+                      exclude={isAccountKey ? accountExclude : !!filterExcludes[key]}
                       onExcludeChange={ex =>
-                        setFilterExcludes(prev => ({ ...prev, [key]: ex }))
+                        isAccountKey
+                          ? setAccountExclude(ex)
+                          : setFilterExcludes(prev => ({ ...prev, [key]: ex }))
                       }
                     />
                     {isLocked && (
