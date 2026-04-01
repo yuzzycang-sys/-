@@ -101,6 +101,8 @@ const INITIAL_VIEWS: ViewItem[] = [
   { id: '7', name: '异常监控视图',       type: 'shared', owner: '陈路遥', pinned: false, tag_ids: ['t3', 't6'] },
   { id: '8', name: '市场大盘',           type: 'public', pinned: false, tag_ids: ['t8'] },
   { id: '9', name: '渠道大盘',           type: 'public', pinned: false },
+  // View 10: shared to 张三 by 赵云, but tags t51(private/赵云) and t52(partial, 张三 not in authUsers) are inaccessible
+  { id: '10', name: '投放核心数据总览',  type: 'shared', owner: '赵云', pinned: false, tag_ids: ['t51', 't52'] },
 ];
 
 const INITIAL_TAGS: QuickTag[] = [
@@ -154,6 +156,8 @@ const INITIAL_TAGS: QuickTag[] = [
   { id: 't48', label: '头条-LTV优化包',   color: 'gold',    active: false, owner: '赵云',   updatedAt: '2026-02-05T09:05:37+08:00', mainChannels: ['大咖-头条-头条btt','大咖-头条-头条btoutiao'], subChannels: ['tt_ltv_01','tt_ltv_02','tt_ltv_03'], vis: 'public', authUsers: [] },
   { id: 't49', label: '快手-品牌+效果',   color: 'blue',    active: false, owner: '李四',   updatedAt: '2026-02-04T17:38:52+08:00', mainChannels: ['大咖-快手-快手ksa','大咖-快手-快手ksb'], subChannels: ['ks_brand_c01','ks_feed_01','ks_feed_02'], vis: 'public', authUsers: [] },
   { id: 't50', label: '全媒体-年度大包',  color: 'green',   active: false, owner: '陈路遥', updatedAt: '2026-02-03T08:00:00+08:00', mainChannels: ['大咖-头条-头条btt','大咖-快手-快手ksa','大咖-广点通-广点通gdt01','大咖-微博-微博wb01','大咖-抖音-抖音dy01'], subChannels: ['tt00zs01','ks_all_01','gdt_main_a01','wb_fan_01','dy_feed_01'], vis: 'public', authUsers: [] },
+  { id: 't51', label: '头条-核心ROI秘投', color: 'red',     active: false, owner: '赵云',   updatedAt: '2026-02-02T10:30:00+08:00', mainChannels: ['大咖-头条-头条btt','大咖-头条-头条btoutiao'], subChannels: ['tt_secret_01','tt_secret_02','tt_secret_03'], vis: 'private', authUsers: [] },
+  { id: 't52', label: '快手-内部测试包',  color: 'cyan',    active: false, owner: '王五',   updatedAt: '2026-02-01T14:20:00+08:00', mainChannels: ['大咖-快手-快手ksa','大咖-快手-快手ksb'], subChannels: ['ks_internal_01','ks_internal_02'], vis: 'partial', authUsers: ['李四','赵云','陈路遥'] },
 ];
 
 // ── Scene 1: TagPermAlignDialog ─────────────────────────────
